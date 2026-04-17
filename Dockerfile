@@ -4,7 +4,7 @@ WORKDIR /app
 # Copy only the POM first to cache dependencies (Senior optimization trick!)
 COPY pom.xml .
 RUN mvn dependency:go-offline
-# Copy the source code and build the JAR
+# Copy the source code and then build the JAR
 COPY src ./src
 RUN mvn clean package -DskipTests
 
