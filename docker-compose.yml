@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: media-postgres
+    environment:
+      POSTGRES_USER: pipeline_admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: media_pipeline
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pipeline_admin -d media_pipeline"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: media-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  media-app:
+    build: .
+    container_name: media-springboot-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Notice how we use the container names ('postgres' and 'rabbitmq') instead of 'localhost'
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/media_pipeline
+      - SPRING_DATASOURCE_USERNAME=pipeline_admin
+      - SPRING_DATASOURCE_PASSWORD=admin123
+      - SPRING_RABBITMQ_HOST=rabbitmq
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
